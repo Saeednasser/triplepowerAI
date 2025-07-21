@@ -20,7 +20,7 @@ def main():
 
     X = prepare_features(data)
 
-    y = (data['Close'].shift(-1) - data['Close']).fillna(0)
+    y = (data['Close'].shift(-1) - data['Close']).fillna(0).squeeze()
     y = y.apply(lambda x: 2 if x > 0.5 else (0 if x < -0.5 else 1))
     y = y.loc[X.index]
 
