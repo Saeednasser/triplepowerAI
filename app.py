@@ -26,14 +26,21 @@ def prepare_features(df):
     features = df[['HL_range', 'OC_change', 'MA_5', 'MA_10']]
     return features
 
-# إدخال المستخدم
 symbol = st.text_input("أدخل رمز السهم (مثلاً AAPL):", value="AAPL").upper()
 period = st.selectbox("اختر فترة التحليل", ["1mo", "3mo", "6mo", "1y"])
 
 if st.button("توقع الاتجاه"):
     with st.spinner("جاري تحميل البيانات وتحليلها..."):
         try:
-            data = yf.download(symbol, period=period, interval="1d", progress=False)
+            # قراءة ملف CSV المحلي إذا كان موجودًا، مع تجاهل الصفوف الأولى (رؤوس متعددة)
+            csv_file = f"{symbol}_data.csv"
+            if os.path.exists(csv_file):
+                data = pd.read_csv(csv_file, header=2, index_col=0, parse_dates=True)
+            else:
+                # تحميل البيانات من الإنترنت وحفظها محليًا
+                data = yf.download(symbol, period=period, interval="1d", progress=False)
+                data.to_csv(csv_file)
+
             if data.empty:
                 st.warning("⚠️ لا توجد بيانات للسهم المدخل أو الفترة المحددة.")
             else:
