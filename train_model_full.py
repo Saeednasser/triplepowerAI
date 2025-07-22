@@ -19,7 +19,7 @@ def main():
     symbol = "AAPL"
     data_file = f"{symbol}_data.csv"
 
-    # تحميل البيانات من الإنترنت وحفظها إذا لم تكن موجودة
+    # تحميل البيانات من yfinance وحفظها إذا لم تكن موجودة
     if not os.path.exists(data_file):
         print("تحميل البيانات من yfinance...")
         data = yf.download(symbol, period="2y", interval="1d", progress=False)
@@ -27,12 +27,11 @@ def main():
         print(f"تم حفظ بيانات السهم في ملف {data_file}")
     else:
         print(f"تحميل البيانات من الملف {data_file}")
-        data = pd.read_csv(data_file, index_col=0, parse_dates=True)
+        # قراءة CSV مع تجاهل الصفوف الأولى غير المرغوبة
+        data = pd.read_csv(data_file, header=2, index_col=0, parse_dates=True)
 
-    # تجهيز الميزات
     X = prepare_features(data)
 
-    # تحضير الهدف
     y = (data['Close'].shift(-1) - data['Close']).fillna(0).squeeze()
     y = y.apply(lambda x: 2 if x > 0.5 else (0 if x < -0.5 else 1))
     y = y.loc[X.index]
@@ -41,14 +40,11 @@ def main():
         print("لا توجد بيانات كافية للتدريب.")
         return
 
-    # تقسيم البيانات
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # تدريب النموذج
     model = RandomForestClassifier(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
 
-    # حفظ النموذج
     joblib.dump(model, "rf_model.pkl")
     print("تم حفظ النموذج rf_model.pkl")
 
