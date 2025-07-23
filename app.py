@@ -13,16 +13,17 @@ MODEL_PATH = "xgb_model.pkl"
 def prepare_features(df):
     df = df.copy()
 
-    # تأكد أن الأعمدة من نوع Index لدعم عمليات السلاسل النصية
-    if not isinstance(df.columns, pd.Index):
-        df.columns = pd.Index(df.columns)
+    # تحويل MultiIndex إلى أسماء أعمدة مسطحة إذا لزم الأمر
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = ['_'.join(map(str, col)).strip() for col in df.columns.values]
+    else:
+        df.columns = df.columns.str.strip()
 
-    df.columns = df.columns.str.strip().str.lower()
+    df.columns = [col.lower() for col in df.columns]
 
     required_cols = ['high', 'low', 'close', 'open']
-    cols_lower = [c.lower() for c in df.columns]
     for col in required_cols:
-        if col not in cols_lower:
+        if col not in df.columns:
             raise ValueError(f"العمود المطلوب غير موجود: {col}")
 
     df['hl_range'] = df['high'] - df['low']
