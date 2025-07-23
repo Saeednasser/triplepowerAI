@@ -10,28 +10,36 @@ st.title("توقعات الأسهم باستخدام نموذج XGBoost")
 
 MODEL_PATH = "xgb_model.pkl"
 
-def flatten_columns(df):
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = ['_'.join(map(str, col)).strip() for col in df.columns.values]
-    return df
-
 def prepare_features(df):
     df = df.copy()
-    df = flatten_columns(df)
 
-    df.columns = df.columns.str.lower()
+    # تحويل MultiIndex إلى أسماء أعمدة مسطحة إذا لزم الأمر
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = ['_'.join(map(str, col)).strip() for col in df.columns.values]
+    else:
+        df.columns = df.columns.str.strip()
 
-    st.write("أعمدة البيانات المحملة:", list(df.columns))
+    df.columns = [col.lower() for col in df.columns]
 
-    required_cols = ['high', 'low', 'close', 'open']
-    for col in required_cols:
-        if col not in df.columns:
-            raise ValueError(f"العمود المطلوب غير موجود: {col}")
+    # دالة للعثور على العمود الذي يبدأ بالمفتاح المطلوب
+    def find_col(cols, key):
+        for c in cols:
+            if c.startswith(key):
+                return c
+        return None
 
-    df['hl_range'] = df['high'] - df['low']
-    df['oc_change'] = df['close'] - df['open']
-    df['ma_5'] = df['close'].rolling(window=5).mean()
-    df['ma_10'] = df['close'].rolling(window=10).mean()
+    required_keys = ['high', 'low', 'close', 'open']
+    found_cols = {}
+    for key in required_keys:
+        col_name = find_col(df.columns, key)
+        if col_name is None:
+            raise ValueError(f"العمود المطلوب غير موجود: {key}")
+        found_cols[key] = col_name
+
+    df['hl_range'] = df[found_cols['high']] - df[found_cols['low']]
+    df['oc_change'] = df[found_cols['close']] - df[found_cols['open']]
+    df['ma_5'] = df[found_cols['close']].rolling(window=5).mean()
+    df['ma_10'] = df[found_cols['close']].rolling(window=10).mean()
     df = df.dropna()
     features = df[['hl_range', 'oc_change', 'ma_5', 'ma_10']]
     return features
