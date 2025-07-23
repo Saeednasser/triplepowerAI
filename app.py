@@ -10,9 +10,10 @@ MODEL_PATH = "xgb_model.pkl"
 DATA_CSV = "AAPL_data.csv"
 
 def load_clean_data(path):
-    df = pd.read_csv(path, header=[0,1], index_col=0, parse_dates=True)
-    df.columns = df.columns.get_level_values(1)
-    df.columns = df.columns.str.strip().str.lower()  # تحويل لأحرف صغيرة وتنظيف
+    # قراءة ملف CSV مع تخطي الصف الثاني (index=1) لأنه غير ضروري
+    df = pd.read_csv(path, header=0, skiprows=[1], index_col=0, parse_dates=True)
+    # تنظيف أسماء الأعمدة وتحويلها إلى أحرف صغيرة
+    df.columns = df.columns.str.strip().str.lower()
     st.write("الأعمدة بعد التنظيف:", list(df.columns))
     return df
 
@@ -24,7 +25,7 @@ def prepare_features(df):
         if col not in cols_lower:
             raise ValueError(f"العمود المطلوب غير موجود: {col}")
 
-    df.columns = df.columns.str.lower()  # تأكد أن الأعمدة كلها صغيرة
+    df.columns = df.columns.str.lower()
     df['hl_range'] = df['high'] - df['low']
     df['oc_change'] = df['close'] - df['open']
     df['ma_5'] = df['close'].rolling(window=5).mean()
