@@ -12,10 +12,16 @@ DATA_CSV = "AAPL_data.csv"
 def load_clean_data(path):
     df = pd.read_csv(path, header=[0,1], index_col=0, parse_dates=True)
     df.columns = df.columns.get_level_values(1)
+    df.columns = df.columns.str.strip()  # إزالة المسافات الزائدة من أسماء الأعمدة
     return df
 
 def prepare_features(df):
     df = df.copy()
+    required_cols = ['High', 'Low', 'Close', 'Open']
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"العمود المطلوب غير موجود: {col}")
+
     df['HL_range'] = df['High'] - df['Low']
     df['OC_change'] = df['Close'] - df['Open']
     df['MA_5'] = df['Close'].rolling(window=5).mean()
