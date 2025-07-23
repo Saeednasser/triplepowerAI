@@ -13,8 +13,13 @@ def prepare_features(df):
     features = df[['HL_range', 'OC_change', 'MA_5', 'MA_10']]
     return features
 
+def load_data_from_csv(file_path):
+    df = pd.read_csv(file_path, header=[0,1], index_col=0, parse_dates=True)
+    df.columns = df.columns.get_level_values(1)
+    return df
+
 def main():
-    data = pd.read_csv("AAPL_data.csv", header=2, index_col=0, parse_dates=True)
+    data = load_data_from_csv("AAPL_data.csv")
     X = prepare_features(data)
     y = (data['Close'].shift(-1) - data['Close']).fillna(0)
     y = y.apply(lambda x: 2 if x > 0.5 else (0 if x < -0.5 else 1))
@@ -24,7 +29,6 @@ def main():
 
     model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
     model.fit(X_train, y_train)
-
     joblib.dump(model, "xgb_model.pkl")
     print("تم حفظ النموذج xgb_model.pkl")
 
