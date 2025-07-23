@@ -10,16 +10,18 @@ st.title("توقعات الأسهم باستخدام نموذج XGBoost")
 
 MODEL_PATH = "xgb_model.pkl"
 
-def prepare_features(df):
-    df = df.copy()
-
-    # تحويل MultiIndex إلى أسماء أعمدة مسطحة إذا لزم الأمر
+def flatten_columns(df):
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = ['_'.join(map(str, col)).strip() for col in df.columns.values]
-    else:
-        df.columns = df.columns.str.strip()
+    return df
 
-    df.columns = [col.lower() for col in df.columns]
+def prepare_features(df):
+    df = df.copy()
+    df = flatten_columns(df)
+
+    df.columns = df.columns.str.lower()
+
+    st.write("أعمدة البيانات المحملة:", list(df.columns))
 
     required_cols = ['high', 'low', 'close', 'open']
     for col in required_cols:
