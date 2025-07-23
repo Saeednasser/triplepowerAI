@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import joblib
 import pandas as pd
@@ -11,7 +12,13 @@ MODEL_PATH = "xgb_model.pkl"
 
 def prepare_features(df):
     df = df.copy()
+
+    # تأكد أن الأعمدة من نوع Index لدعم عمليات السلاسل النصية
+    if not isinstance(df.columns, pd.Index):
+        df.columns = pd.Index(df.columns)
+
     df.columns = df.columns.str.strip().str.lower()
+
     required_cols = ['high', 'low', 'close', 'open']
     cols_lower = [c.lower() for c in df.columns]
     for col in required_cols:
@@ -67,7 +74,7 @@ period = st.selectbox("اختر فترة التحليل", ["1mo", "3mo", "6mo", 
 
 model = load_model()
 if model is None:
-    model = train_model(symbol, "2y")  # تدريب النموذج على سهم AAPL افتراضياً بفترة سنتين
+    model = train_model(symbol, "2y")  # تدريب النموذج افتراضياً على سهم AAPL بفترة سنتين
 
 if st.button("توقع الاتجاه"):
     with st.spinner("جاري تحميل البيانات وتحليلها..."):
