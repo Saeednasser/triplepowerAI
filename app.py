@@ -3,14 +3,11 @@ import streamlit as st
 import joblib
 import pandas as pd
 import yfinance as yf
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 
-st.set_page_config(page_title="توقعات الأسهم بالذكاء الاصطناعي", layout="centered")
-st.title("توقع اتجاهات الأسهم باستخدام نموذج القوة الثلاثية والذكاء الاصطناعي")
+st.title("توقعات الأسهم باستخدام نموذج XGBoost")
 
-MODEL_PATH = "rf_model.pkl"
-DATA_CSV = "AAPL_data.csv"  # بيانات التدريب محفوظة مسبقًا
+MODEL_PATH = "xgb_model.pkl"
+DATA_CSV = "AAPL_data.csv"
 
 def prepare_features(df):
     df = df.copy()
@@ -23,22 +20,24 @@ def prepare_features(df):
     return features
 
 def train_model():
-    st.info("النموذج غير موجود، جاري التدريب... يرجى الانتظار.")
-    # قراءة بيانات التدريب من CSV مع معالجة رؤوس متعددة
+    st.info("النموذج غير موجود، جاري التدريب...")
     data = pd.read_csv(DATA_CSV, header=2, index_col=0, parse_dates=True)
     X = prepare_features(data)
     y = (data['Close'].shift(-1) - data['Close']).fillna(0)
     y = y.apply(lambda x: 2 if x > 0.5 else (0 if x < -0.5 else 1))
     y = y.loc[X.index]
 
+    from xgboost import XGBClassifier
+    from sklearn.model_selection import train_test_split
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+    model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
     model.fit(X_train, y_train)
     joblib.dump(model, MODEL_PATH)
     st.success("تم تدريب النموذج وحفظه بنجاح.")
     return model
 
-# تحميل النموذج أو تدريبه إذا لم يكن موجودًا
 if os.path.exists(MODEL_PATH):
     try:
         model = joblib.load(MODEL_PATH)
@@ -49,14 +48,12 @@ if os.path.exists(MODEL_PATH):
 else:
     model = train_model()
 
-# واجهة المستخدم لإدخال رمز السهم والفترة
 symbol = st.text_input("أدخل رمز السهم (مثلاً AAPL):", value="AAPL").upper()
 period = st.selectbox("اختر فترة التحليل", ["1mo", "3mo", "6mo", "1y"])
 
 if st.button("توقع الاتجاه"):
     with st.spinner("جاري تحميل البيانات وتحليلها..."):
         try:
-            # تحميل بيانات السهم أو من ملف CSV محلي إن كان هو AAPL
             if symbol == "AAPL" and os.path.exists(DATA_CSV):
                 data = pd.read_csv(DATA_CSV, header=2, index_col=0, parse_dates=True)
             else:
