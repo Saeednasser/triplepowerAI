@@ -80,27 +80,35 @@ def load_model():
     else:
         return None
 
-symbol = st.text_input("أدخل رمز السهم (مثلاً AAPL):", value="AAPL").upper()
+symbols_input = st.text_input("أدخل رمز أو أكثر من الأسهم (مفصول بمسافة أو فاصلة):", value="AAPL")
+symbols = [s.strip().upper() for s in symbols_input.replace(",", " ").split() if s.strip()]
+
 period = st.selectbox("اختر فترة التحليل", ["1mo", "3mo", "6mo", "1y", "2y"])
 
 model = load_model()
 if model is None:
-    model = train_model(symbol, "2y")  # تدريب النموذج افتراضياً على سهم AAPL بفترة سنتين
+    model = train_model("AAPL", "2y")  # تدريب افتراضي للنموذج
 
 if st.button("توقع الاتجاه"):
+    results = []
     with st.spinner("جاري تحميل البيانات وتحليلها..."):
-        try:
-            data = yf.download(symbol, period=period, interval="1d", progress=False)
-            if data.empty:
-                st.warning("⚠️ لا توجد بيانات للسهم أو الفترة المحددة.")
-                st.stop()
+        for symbol in symbols:
+            try:
+                data = yf.download(symbol, period=period, interval="1d", progress=False)
+                if data.empty:
+                    results.append((symbol, "⚠️ لا توجد بيانات"))
+                    continue
 
-            X_pred = prepare_features(data)
-            if X_pred.empty:
-                st.warning("⚠️ البيانات غير كافية لتحليل السهم.")
-            else:
+                X_pred = prepare_features(data)
+                if X_pred.empty:
+                    results.append((symbol, "⚠️ بيانات غير كافية"))
+                    continue
+
                 prediction = model.predict(X_pred.tail(1))[0]
                 directions = {0: "هبوط", 1: "استقرار", 2: "صعود"}
-                st.success(f"الاتجاه المتوقع للسهم **{symbol}** هو: **{directions.get(prediction, 'غير معروف')}**")
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء التحميل أو التنبؤ: {e}")
+                results.append((symbol, directions.get(prediction, "غير معروف")))
+            except Exception as e:
+                results.append((symbol, f"خطأ: {e}"))
+
+    df_results = pd.DataFrame(results, columns=["الرمز", "الاتجاه المتوقع"])
+    st.table(df_results)
