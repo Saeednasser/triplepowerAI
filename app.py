@@ -12,29 +12,32 @@ DATA_CSV = "AAPL_data.csv"
 def load_clean_data(path):
     df = pd.read_csv(path, header=[0,1], index_col=0, parse_dates=True)
     df.columns = df.columns.get_level_values(1)
-    df.columns = df.columns.str.strip()  # إزالة المسافات الزائدة من أسماء الأعمدة
+    df.columns = df.columns.str.strip().str.lower()  # تحويل لأحرف صغيرة وتنظيف
+    st.write("الأعمدة بعد التنظيف:", list(df.columns))
     return df
 
 def prepare_features(df):
     df = df.copy()
-    required_cols = ['High', 'Low', 'Close', 'Open']
+    required_cols = ['high', 'low', 'close', 'open']
+    cols_lower = [c.lower() for c in df.columns]
     for col in required_cols:
-        if col not in df.columns:
+        if col not in cols_lower:
             raise ValueError(f"العمود المطلوب غير موجود: {col}")
 
-    df['HL_range'] = df['High'] - df['Low']
-    df['OC_change'] = df['Close'] - df['Open']
-    df['MA_5'] = df['Close'].rolling(window=5).mean()
-    df['MA_10'] = df['Close'].rolling(window=10).mean()
+    df.columns = df.columns.str.lower()  # تأكد أن الأعمدة كلها صغيرة
+    df['hl_range'] = df['high'] - df['low']
+    df['oc_change'] = df['close'] - df['open']
+    df['ma_5'] = df['close'].rolling(window=5).mean()
+    df['ma_10'] = df['close'].rolling(window=10).mean()
     df = df.dropna()
-    features = df[['HL_range', 'OC_change', 'MA_5', 'MA_10']]
+    features = df[['hl_range', 'oc_change', 'ma_5', 'ma_10']]
     return features
 
 def train_model():
     st.info("النموذج غير موجود، جاري التدريب...")
     data = load_clean_data(DATA_CSV)
     X = prepare_features(data)
-    y = (data['Close'].shift(-1) - data['Close']).fillna(0)
+    y = (data['close'].shift(-1) - data['close']).fillna(0)
     y = y.apply(lambda x: 2 if x > 0.5 else (0 if x < -0.5 else 1))
     y = y.loc[X.index]
 
