@@ -9,6 +9,11 @@ st.title("توقعات الأسهم باستخدام نموذج XGBoost")
 MODEL_PATH = "xgb_model.pkl"
 DATA_CSV = "AAPL_data.csv"
 
+def load_clean_data(path):
+    df = pd.read_csv(path, header=[0,1], index_col=0, parse_dates=True)
+    df.columns = df.columns.get_level_values(1)
+    return df
+
 def prepare_features(df):
     df = df.copy()
     df['HL_range'] = df['High'] - df['Low']
@@ -19,14 +24,9 @@ def prepare_features(df):
     features = df[['HL_range', 'OC_change', 'MA_5', 'MA_10']]
     return features
 
-def load_data_from_csv(file_path):
-    df = pd.read_csv(file_path, header=[0,1], index_col=0, parse_dates=True)
-    df.columns = df.columns.get_level_values(1)
-    return df
-
 def train_model():
     st.info("النموذج غير موجود، جاري التدريب...")
-    data = load_data_from_csv(DATA_CSV)
+    data = load_clean_data(DATA_CSV)
     X = prepare_features(data)
     y = (data['Close'].shift(-1) - data['Close']).fillna(0)
     y = y.apply(lambda x: 2 if x > 0.5 else (0 if x < -0.5 else 1))
@@ -60,7 +60,7 @@ if st.button("توقع الاتجاه"):
     with st.spinner("جاري تحميل البيانات وتحليلها..."):
         try:
             if symbol == "AAPL" and os.path.exists(DATA_CSV):
-                data = load_data_from_csv(DATA_CSV)
+                data = load_clean_data(DATA_CSV)
             else:
                 data = yf.download(symbol, period=period, interval="1d", progress=False)
                 if data.empty:
